@@ -6,13 +6,10 @@ const App: React.FC = () => {
   const [y, setY] = useState<number>(0);
   const [listOfX, setListOfX] = useState<Array<number>>([]);
   const [listOfY, setListOfY] = useState<Array<number>>([]);
-  const [errorMessage, setErrorMessage] = useState("");
   const [averageOfX, setAverageOfX] = useState(0);
   const [averageOfY, setAverageOfY] = useState(0);
   const [standardDeviationOfX, setStandardDeviationOfX] = useState(0);
   const [standardDeviationOfY, setStandardDeviationOfY] = useState(0);
-  const [listOfXDeviations, setListOfXDeviations] = useState<Array<number>>([]);
-  const [listOfYDeviations, setListOfYDeviations] = useState<Array<number>>([]);
   const [correlationCoefficient, setCorrelationCoefficient] = useState<number>();
   const [correlation, setCorrelation] = useState("");
 
@@ -22,14 +19,10 @@ const App: React.FC = () => {
     } else {
       setY(value);
     }
-
-    if (x === undefined || y === undefined) {
-      setErrorMessage("値を入力してください");
-    }
   }
 
   function addItems() {
-    if (listOfX && listOfY) {
+    if (listOfX && listOfY && x && y) {
       let newListOfX = listOfX;
       let newListOfY = listOfY;
       newListOfX.push(x);
@@ -46,8 +39,8 @@ const App: React.FC = () => {
 
   function onClickHandler() {
     calculateAverage();
-    calculateStandardDeviation();
-    findPearsonCorrelation();
+    // calculateStandardDeviation();
+    // findPearsonCorrelation();
   }
 
   function calculateAverage() {
@@ -62,42 +55,51 @@ const App: React.FC = () => {
 
     setAverageOfX(sumX / lengthOfX);
     setAverageOfY(sumY / lengthOfX);
+
+    // 標準偏差を求める関数を実行する
+    calculateStandardDeviation(sumX / lengthOfX, sumY / lengthOfX);
   }
 
-  function calculateStandardDeviation() {
+  function calculateStandardDeviation(averageOfX: number, averageOfY: number) {
     const lengthOfX = listOfX.length;
 
     // xとyそれぞれの偏差を求める
-    let listOfXDeviationsForStandardDeviation: Array<number> = [];
-    let listOfYDeviationsForStandardDeviation: Array<number> = [];
+    let listOfXDeviations: Array<number> = [];
+    let listOfYDeviations: Array<number> = [];
     for (let n = 0; n < lengthOfX; n++) {
-      listOfXDeviationsForStandardDeviation.push(listOfX[n] - averageOfX);
-      listOfYDeviationsForStandardDeviation.push(listOfY[n] - averageOfY);
+      listOfXDeviations.push(listOfX[n] - averageOfX);
+      listOfYDeviations.push(listOfY[n] - averageOfY);
     }
-    // 後の計算のために値をセットしておく
-    setListOfXDeviations(listOfXDeviationsForStandardDeviation);
-    setListOfYDeviations(listOfYDeviationsForStandardDeviation);
 
     // xとyそれぞれの分散を求める
     let sumOfSquaredDeviationsOfX = 0;
     let sumOfSquaredDeviationsOfY = 0;
     for (let n = 0; n < lengthOfX; n++) {
-      sumOfSquaredDeviationsOfX += listOfXDeviationsForStandardDeviation[n] ** 2;
-      sumOfSquaredDeviationsOfY += listOfYDeviationsForStandardDeviation[n] ** 2;
+      sumOfSquaredDeviationsOfX += listOfXDeviations[n] ** 2;
+      sumOfSquaredDeviationsOfY += listOfYDeviations[n] ** 2;
     }
     const dispersionOfX = sumOfSquaredDeviationsOfX / lengthOfX;
     const dispersionOfY = sumOfSquaredDeviationsOfY / lengthOfX;
 
-    // 平方根をとる
+    // 平方根をとり標準偏差を求める
     setStandardDeviationOfX(Math.sqrt(dispersionOfX));
     setStandardDeviationOfY(Math.sqrt(dispersionOfY));
+
+    // 相関があるか求める関数を実行する
+    findPearsonCorrelation(listOfXDeviations, listOfYDeviations, Math.sqrt(dispersionOfX), Math.sqrt(dispersionOfY));
   }
 
-  function findPearsonCorrelation() {
+  function findPearsonCorrelation(
+    listOfXDeviations: Array<number>,
+    listOfYDeviations: Array<number>,
+    standardDeviationOfX: number,
+    standardDeviationOfY: number
+  ) {
     let sum = 0;
     for (let n = 0; n < listOfX.length; n++) {
       sum += listOfXDeviations[n] * listOfYDeviations[n];
     }
+
     const covariance = sum / listOfX.length;
     const result = covariance / (standardDeviationOfX * standardDeviationOfY);
     setCorrelationCoefficient(result);
@@ -105,7 +107,7 @@ const App: React.FC = () => {
       setCorrelation("相関なし");
     } else if ((-0.5 < result && result <= -0.3) || (0.3 <= result && result < 0.5)) {
       setCorrelation("中性");
-    } else if ((-1 < result && result <= -0.5) || (0.5 <= result && result < 1)) {
+    } else if ((-1 <= result && result <= -0.5) || (0.5 <= result && result <= 1)) {
       setCorrelation("相関あり");
     }
   }
@@ -119,8 +121,6 @@ const App: React.FC = () => {
     setAverageOfY(0);
     setStandardDeviationOfX(0);
     setStandardDeviationOfY(0);
-    setListOfXDeviations([]);
-    setListOfYDeviations([]);
     setCorrelationCoefficient(0);
     setCorrelation("");
   }
@@ -133,7 +133,6 @@ const App: React.FC = () => {
       <p>
         y: <input type="number" onChange={(e) => onChangeHandler("y", Number(e.target.value))} value={y} />
       </p>
-      <p>{errorMessage}</p>
       <button onClick={() => addItems()}>追加</button>
       <table>
         <tr>
